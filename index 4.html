@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>بوابة LSPD</title>
+<meta name="description" content="بوابة شرطة لوس سانتوس LSPD: تقارير، مخالفات، دوام، رتب ونقاط الضباط.">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3f5f9;--card:#fff;--tx:#14213d;--mu:#5b6478;--ac:#1d4ed8;--ac2:#e0e9ff;--bd:#d9dfeb;--dg:#c62828}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1220;--card:#131c2e;--tx:#e8edf7;--mu:#97a3bb;--ac:#5b8def;--ac2:#1b2a4a;--bd:#25324d;--dg:#ef6c6c}}
+:root[data-theme="dark"]{--bg:#0b1220;--card:#131c2e;--tx:#e8edf7;--mu:#97a3bb;--ac:#5b8def;--ac2:#1b2a4a;--bd:#25324d;--dg:#ef6c6c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;line-height:1.6}
+header{background:var(--ac);color:#fff;padding:18px 16px;text-align:center}
+header h1{margin:0;font-size:1.3rem}
+header p{margin:2px 0 0;font-size:.85rem;opacity:.85}
+nav{display:flex;gap:6px;padding:10px;overflow-x:auto;background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+nav button{flex:1;white-space:nowrap;border:0;background:transparent;color:var(--mu);padding:9px 14px;border-radius:10px;font:inherit;cursor:pointer}
+nav button.on{background:var(--ac2);color:var(--ac);font-weight:700}
+main{max-width:720px;margin:0 auto;padding:14px}
+section{display:none}section.on{display:block}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{text-align:center}.stat b{display:block;font-size:1.5rem;color:var(--ac)}.stat span{font-size:.8rem;color:var(--mu)}
+label{display:block;font-size:.85rem;color:var(--mu);margin:10px 0 4px}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit}
+textarea{min-height:90px;resize:vertical}
+.btn{margin-top:12px;width:100%;padding:11px;border:0;border-radius:10px;background:var(--ac);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.btn.red{background:var(--dg)}
+.item{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;border-top:1px solid var(--bd);padding:10px 0}
+.item:first-child{border-top:0}
+.item small{color:var(--mu);display:block}
+.del{border:0;background:transparent;color:var(--dg);cursor:pointer;font:inherit}
+.timer{font-size:2.4rem;text-align:center;font-variant-numeric:tabular-nums;color:var(--ac);margin:8px 0}
+.empty{color:var(--mu);text-align:center;padding:10px}
+h2{font-size:1.05rem;margin:0 0 6px}
+</style>
+</head>
+<body>
+<header><h1>🚓 بوابة شرطة لوس سانتوس</h1><p>LSPD Portal · <span id="mode">وضع محلي</span></p></header>
+<nav id="nav">
+<button data-t="home" class="on">الرئيسية</button>
+<button data-t="rep">التقارير</button>
+<button data-t="fine">المخالفات</button>
+<button data-t="duty">الدوام</button>
+<button data-t="warn">التنبيهات</button>
+<button data-t="ranks">الرتب</button>
+<button data-t="pts">النقاط</button>
+<button data-t="admin" id="adm" style="display:none">الإدارة</button>
+</nav>
+<main>
+<section id="home" class="on">
+<div class="card"><label style="margin-top:0">اسم الضابط (يُحفظ على جهازك ويظهر في تقاريرك)</label><input id="off" placeholder="مثال: أحمد – 1042"><label>رقم اليونت</label><input id="un" placeholder="مثال: 1042" inputmode="numeric"><div id="st" style="margin-top:10px;font-size:.9rem"></div><label>الرتبة (يحددها المسؤول)</label><select id="rk" disabled></select></div>
+<div class="card"><label style="margin-top:0">رمز الإدارة</label><input id="ac" type="password" placeholder="أدخل الرمز"><button class="btn" id="ab">دخول كمسؤول</button><button class="btn red" id="ao" style="display:none">خروج من وضع المسؤول</button></div>
+<div id="wb" class="card" style="display:none"></div>
+<div class="stats">
+<div class="card stat"><b id="s1">0</b><span>تقارير</span></div>
+<div class="card stat"><b id="s2">0</b><span>مخالفات</span></div>
+<div class="card stat"><b id="s3">0س</b><span>ساعات الدوام</span></div>
+</div>
+</section>
+
+<section id="rep">
+<div class="card"><h2>تقرير جديد</h2>
+<label>نوع التقرير</label>
+<select id="rt"><option>حادث</option><option>اعتقال</option><option>بلاغ</option><option>تفتيش</option><option>أخرى</option></select>
+<label>اسم المشتبه / المواطن</label><input id="rn">
+<label>التفاصيل</label><textarea id="rd"></textarea>
+<button class="btn" id="rs">حفظ التقرير</button></div>
+<div class="card"><h2>السجل</h2><div id="rl"></div></div>
+</section>
+
+<section id="fine">
+<div class="card"><h2>تسجيل مخالفة</h2>
+<label>اسم المواطن</label><input id="fn">
+<label>المخالفة</label>
+<select id="fo">
+<option value="1500">تجاوز السرعة – 1,500$</option>
+<option value="2500">قطع إشارة – 2,500$</option>
+<option value="4000">قيادة متهورة – 4,000$</option>
+<option value="6000">حمل سلاح بدون رخصة – 6,000$</option>
+<option value="800">وقوف خاطئ – 800$</option>
+</select>
+<button class="btn" id="fs">إضافة المخالفة</button></div>
+<div class="card"><h2>المخالفات المسجلة <span id="ft" style="color:var(--mu);font-size:.85rem"></span></h2><div id="fl"></div></div>
+</section>
+
+<section id="duty">
+<div class="card"><h2>سجل الدوام</h2>
+<div class="timer" id="tm">00:00:00</div>
+<button class="btn" id="db">بدء الدوام</button></div>
+<div class="card"><h2>الجلسات السابقة</h2><div id="dl"></div></div>
+</section>
+<section id="warn">
+<div class="card" id="wcard" style="display:none"><h2>إصدار تحذير أو تنبيه</h2><small style="color:var(--mu)">متاح لرتبة Captain وما فوق</small>
+<label>الضابط (اتركه فاضي لتنبيه عام للجميع)</label><input id="wn">
+<label>النوع</label><select id="wt"><option>تنبيه</option><option>تحذير</option><option>إنذار</option></select>
+<label>السبب</label><textarea id="ww" style="min-height:70px"></textarea>
+<button class="btn" id="wsb">إرسال</button></div>
+<div class="card"><h2>التنبيهات والتحذيرات</h2><div id="wl"></div></div>
+</section>
+<section id="ranks">
+<div class="card"><h2>الرتب والنقاط المطلوبة</h2><small style="color:var(--mu)">كل رتبة تفرق عن اللي قبلها بـ 200 نقطة، ونظام النقاط يوقف عند Captain</small><div id="rkl" style="margin-top:8px"></div></div>
+</section>
+<section id="pts">
+<div class="card"><h2>ترتيب نقاط الضباط</h2><small style="color:var(--mu)">تقرير = 20 · مخالفة = 10 · ساعة دوام = 50</small><div id="pl" style="margin-top:8px"></div></div>
+<div class="card" id="gcard" style="display:none"><h2>منح نقاط</h2><small style="color:var(--mu)">متاح لرتبة Captain وما فوق</small><label>اسم الضابط</label><input id="gn"><label>عدد النقاط</label><input id="gv" type="number" min="1" max="1000" inputmode="numeric"><label>السبب</label><input id="gw"><button class="btn" id="gs">منح النقاط</button></div>
+<div class="card"><h2>سجل المنح</h2><div id="gl"></div></div>
+</section>
+<section id="admin">
+<div class="card"><h2>تعيين الرتب</h2>
+<label>اسم الضابط (نفس الاسم اللي يكتبه في الصفحة الرئيسية)</label><input id="an">
+<label>الرتبة</label><select id="ar"></select>
+<button class="btn" id="as">حفظ الرتبة</button></div>
+<div class="card"><h2>الضباط</h2><div id="al"></div></div>
+<div class="card"><h2>المسجلون في البرنامج <span id="mc" style="color:var(--mu);font-size:.85rem"></span></h2><div id="ml"></div></div>
+<div class="card"><h2>متصلون الآن <span id="oc" style="color:var(--mu);font-size:.85rem"></span></h2><div id="ol"></div></div>
+</section>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ===== إعدادات يعبيها صاحب الموقع ===== */
+var FIREBASE_CONFIG={apiKey:"",authDomain:"",projectId:"",appId:""};
+var ADMIN_CODE="FAHAD";
+/* ======================================= */
+(function(){
+var fs=null,adm=false;
+try{if(FIREBASE_CONFIG.projectId){firebase.initializeApp(FIREBASE_CONFIG);fs=firebase.firestore()}}catch(e){}
+try{adm=localStorage.getItem("lspd_adm")===ADMIN_CODE}catch(e){}
+window.claude={use:function(n){
+if(n==="db"&&fs)return Promise.resolve({collection:function(k){var c=fs.collection(k);return{
+doc:function(id){var d=c.doc(id);return{set:function(o){return d.set(o)},delete:function(){return d.delete()}}},
+orderBy:function(f,dir){var q=c.orderBy(f,dir);return{limit:function(m){var q2=q.limit(m);return{onSnapshot:function(a,b){return q2.onSnapshot(a,b)}}}}}}}});
+if(n==="user")return Promise.resolve({isOwner:function(){return adm},canEdit:function(){return adm}});
+return Promise.resolve(null)}};
+window.addEventListener("load",function(){var g=function(x){return document.getElementById(x)},ab=g("ab"),ao=g("ao"),ac=g("ac");
+if(adm){ab.style.display="none";ac.style.display="none";ao.style.display=""}
+ab.onclick=function(){var v=ac.value;if(v&&v===ADMIN_CODE){try{localStorage.setItem("lspd_adm",v)}catch(e){}location.reload()}else alert("الرمز غير صحيح")};
+ao.onclick=function(){try{localStorage.removeItem("lspd_adm")}catch(e){}location.reload()}});
+})();
+</script>
+<script>
+var $=function(i){return document.getElementById(i)};
+var S={off:"",rep:[],fine:[],duty:[],officers:[],grants:[],members:[],approved:[],warns:[],unit:"",start:null};
+try{var r=localStorage.getItem("lspd");if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
+function save(){try{localStorage.setItem("lspd",JSON.stringify(S))}catch(e){}}
+function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
+function fmt(ms){var s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return[h,m,s%60].map(function(x){return String(x).padStart(2,"0")}).join(":")}
+function d(t){return new Date(t).toLocaleString("ar-SA",{dateStyle:"short",timeStyle:"short"})}
+
+document.querySelectorAll("nav button").forEach(function(b){b.onclick=function(){
+document.querySelectorAll("nav button,section").forEach(function(x){x.classList.remove("on")});
+b.classList.add("on");$(b.dataset.t).classList.add("on")}});
+
+$("off").value=S.off;
+$("off").oninput=function(){S.off=this.value;save();render()};
+function reg(){var n=(S.off||"").trim(),un=(S.unit||"").trim();if(!n||!un)return;var id=hh(n),o={n:n,un:un,at:Date.now()};if(db){db.collection("members").doc(id).set(o).catch(function(){$("mode").textContent="لا صلاحية كتابة"})}else{S.members=S.members.filter(function(x){return x.id!==id});o.id=id;S.members.unshift(o);save();render()}}
+$("off").onchange=function(){reg();pres()};
+$("un").value=S.unit||"";$("un").onchange=function(){S.unit=this.value;save();reg();render()};
+var room=null,online=[];
+function pres(){if(room)room.presence({name:(S.off||"").trim(),rank:myRank()}).catch(function(){})}
+try{window.claude&&claude.use("room").then(function(r){if(!r)return;room=r;pres();r.onPeers(function(c){online=c.peers.slice();render()},function(){})}).catch(function(){})}catch(e){}
+var RK=["Cadet","Solo Cadet","Corporal","Sergeant","Staff Sergeant","Sergeant First Class","Sergeant Major","Second Lieutenant","First Lieutenant","Captain","Major","Lieutenant Colonel","Colonel","Brigadier General","Major General","Deputy Chief of Police","Chief of Police"];
+$("rk").innerHTML=RK.map(function(r){return '<option>'+r+'</option>'}).join("");
+if(RK.indexOf(S.rank)<0)S.rank=RK[0];$("rk").value=S.rank;
+function pts(){var u=(S.off||"").trim(),t=0;if(!u)return 0;S.rep.forEach(function(x){if(x.u===u)t+=20});S.fine.forEach(function(x){if(x.u===u)t+=10});S.duty.forEach(function(x){if(x.u===u)t+=Math.floor(x.ms/3600000*50)});return t}
+function myRank(){var u=(S.off||"").trim(),o=S.officers.filter(function(x){return x.n===u})[0];return o&&RK.indexOf(o.r)>=0?o.r:RK[0]}
+function who(){return (myRank()+" "+(S.off||"")).trim()}
+function isCap(){return admOn||RK.indexOf(myRank())>=RK.indexOf("Captain")}
+$("rkl").innerHTML=RK.map(function(r,i){return '<div class="item"><b>'+(i+1)+'. '+r+'</b><b style="color:var(--ac)">'+(i<=RK.indexOf("Captain")?(i*200)+" نقطة":"بالتعيين فقط")+'</b></div>'}).join("");
+var admOn=false;function showAdm(){admOn=true;$("adm").style.display="";render()}
+$("gs").onclick=function(){var n=$("gn").value.trim(),v=parseInt($("gv").value,10),w=$("gw").value.trim();
+if(!(admOn||RK.indexOf(myRank())>=RK.indexOf("Captain"))){alert("المنح للكابتن وفوق فقط");return}
+if(!n||!(v>=1&&v<=1000)){alert("اكتب الاسم ونقاط بين 1 و1000");return}
+if(n===(S.off||"").trim()){alert("ما تقدر تعطي نفسك نقاط");return}
+add("grants",{n:n,v:v,why:w,by:who(),at:Date.now()});$("gn").value="";$("gv").value="";$("gw").value=""};
+if(!window.claude)showAdm();
+function hh(n){var h=5381;for(var i=0;i<n.length;i++)h=(h*33+n.charCodeAt(i))%4294967296;return "o"+h.toString(36)}
+$("ar").innerHTML=RK.map(function(r){return '<option>'+r+'</option>'}).join("");
+$("as").onclick=function(){if(!isCap()){alert("تعيين الرتب للكابتن وفوق فقط");return}var n=$("an").value.trim();if(!n){alert("اكتب اسم الضابط");return}
+var id=hh(n),o={n:n,r:$("ar").value,at:Date.now()};
+if(db){db.collection("officers").doc(id).set(o).catch(function(){alert("ما عندك صلاحية")})}
+else{S.officers=S.officers.filter(function(x){return x.id!==id});o.id=id;S.officers.unshift(o);save()}
+$("an").value="";render()};
+
+function render(){
+$("rl").innerHTML=S.rep.length?S.rep.map(function(x,i){return '<div class="item"><div><b>'+esc(x.t)+' – '+esc(x.n)+'</b><small>'+esc(x.d)+'</small><small>'+esc(x.o||"—")+' · '+d(x.at)+'</small></div><button class="del" data-k="rep" data-i="'+i+'">حذف</button></div>'}).join(""):'<div class="empty">لا توجد تقارير</div>';
+var tot=0;
+$("fl").innerHTML=S.fine.length?S.fine.map(function(x,i){tot+=x.a;return '<div class="item"><div><b>'+esc(x.n)+'</b><small>'+esc(x.l)+' · '+esc(x.o||"—")+' · '+d(x.at)+'</small></div><button class="del" data-k="fine" data-i="'+i+'">حذف</button></div>'}).join(""):'<div class="empty">لا توجد مخالفات</div>';
+$("ft").textContent=S.fine.length?"· المجموع "+tot.toLocaleString("en")+"$":"";
+var ms=0;
+$("dl").innerHTML=S.duty.length?S.duty.map(function(x,i){ms+=x.ms;return '<div class="item"><div><b>'+fmt(x.ms)+'</b><small>'+esc(x.o||"—")+' · '+d(x.at)+'</small></div><button class="del" data-k="duty" data-i="'+i+'">حذف</button></div>'}).join(""):'<div class="empty">لا توجد جلسات</div>';
+$("s1").textContent=S.rep.length;$("s2").textContent=S.fine.length;$("s3").textContent=(ms/3600000).toFixed(1)+"س";
+var M={};function g(u){return M[u]||(M[u]={r:0,f:0,h:0,p:0})}
+S.rep.forEach(function(x){if(x.u){var a=g(x.u);a.r++;a.p+=20}});
+S.fine.forEach(function(x){if(x.u){var a=g(x.u);a.f++;a.p+=10}});
+S.duty.forEach(function(x){if(x.u){var a=g(x.u);a.h+=x.ms;a.p+=Math.floor(x.ms/3600000*50)}});
+S.officers.forEach(function(x){g(x.n)});
+S.grants.forEach(function(x){var a=g(x.n);a.p+=x.v});
+var CAP=RK.indexOf("Captain")*200;Object.keys(M).forEach(function(u){if(M[u].p>CAP)M[u].p=CAP});
+var L=Object.keys(M).map(function(u){var o=S.officers.filter(function(x){return x.n===u})[0];return{u:u,rk:o?o.r:RK[0],a:M[u]}}).sort(function(a,b){return b.a.p-a.a.p});
+var on=online.filter(function(p){return p.presence&&p.presence.name});
+$("oc").textContent="· "+on.length;
+$("ol").innerHTML=on.length?on.map(function(p){return '<div class="item"><div><b>'+esc(String(p.presence.name))+'</b><small>'+esc(String(p.presence.rank||""))+(p.guest?' · ضيف':'')+(p.isMe?' · أنت':'')+'</small></div></div>'}).join(""):'<div class="empty">لا أحد متصل</div>';
+var me=(S.off||"").trim(),cap=isCap();
+var wv=S.warns.filter(function(x){return cap||!x.n||x.n===me});
+var mine=S.warns.filter(function(x){return x.n&&x.n===me});
+$("wcard").style.display=cap?"":"none";
+$("wl").innerHTML=wv.length?wv.map(function(x){var c=x.t==="إنذار"?"var(--dg)":x.t==="تحذير"?"#d97706":"var(--ac)";return '<div class="item"><div><b style="color:'+c+'">'+esc(x.t)+' · '+(x.n?esc(x.n):'عام للجميع')+'</b><small>'+esc(x.why)+'</small><small>'+esc(x.by||"—")+' · '+d(x.at)+'</small></div>'+(cap?'<button class="del" data-k="warns" data-i="'+S.warns.indexOf(x)+'">حذف</button>':'')+'</div>'}).join(""):'<div class="empty">لا توجد تنبيهات</div>';
+var bn=mine.length?'<b style="color:var(--dg)">⚠️ عندك '+mine.length+' تحذير/تنبيه</b><small style="display:block;color:var(--mu)">آخرها: '+esc(mine[0].t)+' – '+esc(mine[0].why)+'</small>':'';
+if(mine.filter(function(x){return x.t!=="تنبيه"}).length>=3)bn+='<div style="color:var(--dg);margin-top:6px">⛔ وصلت 3 تحذيرات أو أكثر</div>';
+S.warns.filter(function(x){return !x.n}).slice(0,2).forEach(function(x){bn+='<div style="margin-top:6px">📢 '+esc(x.why)+'</div>'});
+$("wb").innerHTML=bn;$("wb").style.display=bn?"":"none";
+$("st").textContent=!db?"":admOn?"✅ أنت المسؤول":isApproved()?"✅ مقبول في البرنامج":((S.off||"").trim()&&(S.unit||"").trim()?"⏳ بانتظار قبول المسؤول":"اكتب اسمك ورقم اليونت للتسجيل");
+$("mc").textContent="· "+S.members.length;
+$("ml").innerHTML=S.members.length?S.members.slice().sort(function(a,b){return b.at-a.at}).map(function(x){var id=hh(x.n),ap=S.approved.some(function(y){return y.id===id}),o=S.officers.filter(function(y){return y.n===x.n})[0],nm=esc(x.n).replace(/"/g,"&quot;");return '<div class="item"><div><b>'+esc(x.n)+(x.un?' · يونت '+esc(String(x.un)):'')+'</b><small>'+(ap?esc(o&&RK.indexOf(o.r)>=0?o.r:RK[0]):'⏳ بانتظار القبول')+' · '+d(x.at)+'</small></div><div>'+(ap?'<button class="del" style="color:var(--ac)" data-fill="'+nm+'">تعيين</button> ':'<button class="del" style="color:var(--ac)" data-ok="'+nm+'" data-un="'+esc(String(x.un||"")).replace(/"/g,"&quot;")+'">قبول</button> ')+'<button class="del" data-no="'+nm+'">'+(ap?'إلغاء':'رفض')+'</button></div></div>'}).join(""):'<div class="empty">لا يوجد مسجلون</div>';
+$("adm").style.display=isCap()?"":"none";$("gcard").style.display=(isCap())?"":"none";
+$("gl").innerHTML=S.grants.length?S.grants.slice(0,30).map(function(x){return '<div class="item"><div><b>'+esc(x.n)+' +'+x.v+'</b><small>'+esc(x.why||"—")+' · '+esc(x.by||"—")+' · '+d(x.at)+'</small></div></div>'}).join(""):'<div class="empty">لا توجد منح</div>';
+$("pl").innerHTML=L.length?L.map(function(x,i){return '<div class="item"><div><b>'+(i+1)+'. '+esc(x.u)+'</b><small>'+esc(x.rk)+' · تقارير '+x.a.r+' · مخالفات '+x.a.f+' · دوام '+(x.a.h/3600000).toFixed(1)+'س</small></div><b style="color:var(--ac)">'+x.a.p+'</b></div>'}).join(""):'<div class="empty">لا توجد نقاط بعد</div>';
+$("al").innerHTML=S.officers.length?S.officers.map(function(x,i){return '<div class="item"><div><b>'+esc(x.n)+'</b><small>'+esc(x.r)+'</small></div><button class="del" data-k="officers" data-i="'+i+'">حذف</button></div>'}).join(""):'<div class="empty">لا يوجد ضباط</div>';
+var p=pts(),ri=Math.min(RK.length-1,Math.floor(p/200));S.rank=myRank();$("rk").value=S.rank;
+
+
+
+$("db").textContent=S.start?"إنهاء الدوام":"بدء الدوام";
+$("db").className="btn"+(S.start?" red":"");
+}
+var db=null;
+$("wsb").onclick=function(){if(!isCap()){alert("الإصدار للكابتن وفوق فقط");return}var n=$("wn").value.trim(),w=$("ww").value.trim();if(!w){alert("اكتب السبب");return}add("warns",{n:n,t:$("wt").value,why:w,by:who(),at:Date.now()});$("wn").value="";$("ww").value=""};
+function isApproved(){var id=hh((S.off||"").trim());return S.approved.some(function(x){return x.id===id})}
+function canWrite(){return !db||admOn||isApproved()}
+function approve(id,n,un){if(!admOn){alert("القبول للمسؤول فقط");return}if(db){db.collection("approved").doc(id).set({n:n,un:un||"",at:Date.now()}).catch(function(){alert("ما عندك صلاحية")})}else{S.approved=S.approved.filter(function(x){return x.id!==id});S.approved.push({id:id,n:n,un:un||"",at:Date.now()});save();render()}}
+function reject(id){if(!admOn){alert("للمسؤول فقط");return}if(db){db.collection("approved").doc(id).delete().catch(function(){});db.collection("members").doc(id).delete().catch(function(){})}else{S.approved=S.approved.filter(function(x){return x.id!==id});S.members=S.members.filter(function(x){return x.id!==id});save();render()}}
+function add(k,o){if(!canWrite()){alert("حسابك ينتظر قبول المسؤول");return}if(db){db.collection(k).doc("i"+Date.now()+Math.random().toString(36).slice(2,6)).set(o).catch(function(){alert("ما عندك صلاحية الكتابة")})}else{S[k].unshift(o);save();render()}}
+function del(k,i){if((k==="officers"||k==="warns")&&!isCap()){alert("حذف الرتب للكابتن وفوق فقط");return}var x=S[k][i];if(db&&x&&x.id){db.collection(k).doc(x.id).delete().catch(function(){alert("ما عندك صلاحية الحذف")})}else{S[k].splice(i,1);save();render()}}
+document.addEventListener("click",function(e){var k=e.target.dataset&&e.target.dataset.k;if(k)del(k,+e.target.dataset.i);var f=e.target.dataset&&e.target.dataset.fill;if(f!==undefined){$("an").value=f;$("an").focus();window.scrollTo(0,0)}var ds=e.target.dataset||{};if(ds.ok!==undefined)approve(hh(ds.ok),ds.ok,ds.un);if(ds.no!==undefined)reject(hh(ds.no))});
+try{window.claude&&claude.use("db").then(function(d){if(!d){showAdm();return}db=d;reg();claude.use("user").then(function(u){if(u&&(u.isOwner()||u.canEdit()))showAdm()}).catch(function(){});$("mode").textContent="مشترك";
+["rep","fine","duty","officers","grants","members","approved","warns"].forEach(function(k){S[k]=[];db.collection(k).orderBy("at","desc").limit(200).onSnapshot(function(s){S[k]=s.docs.map(function(x){var o=x.data();o.id=x.id;return o});render()},function(){})})}).catch(function(){})}catch(e){}
+
+$("rs").onclick=function(){
+var n=$("rn").value.trim(),t=$("rd").value.trim();
+if(!n||!t){alert("عبّ الاسم والتفاصيل");return}
+add("rep",{t:$("rt").value,n:n,d:t,o:who(),u:(S.off||"").trim(),at:Date.now()});
+$("rn").value="";$("rd").value=""};
+
+$("fs").onclick=function(){
+var n=$("fn").value.trim();if(!n){alert("اكتب اسم المواطن");return}
+var o=$("fo");
+add("fine",{n:n,l:o.options[o.selectedIndex].text,a:+o.value,o:who(),u:(S.off||"").trim(),at:Date.now()});
+$("fn").value=""};
+
+$("db").onclick=function(){if(!S.start&&!canWrite()){alert("حسابك ينتظر قبول المسؤول");return}
+if(S.start){add("duty",{ms:Date.now()-S.start,at:S.start,o:who(),u:(S.off||"").trim()});S.start=null;$("tm").textContent="00:00:00"}
+else S.start=Date.now();
+save();render()};
+setInterval(function(){if(S.start)$("tm").textContent=fmt(Date.now()-S.start)},1000);
+render();
+</script>
+</body>
+</html>
